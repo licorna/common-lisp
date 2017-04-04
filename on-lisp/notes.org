@@ -197,3 +197,51 @@ program, or some other reason, but we should not rely on those side effects.
 
 The `multiple-value-bind` macro is explained, and the usage of the `values`
 form.
+
+* Utility Functions
+
+This is an interesting section that might be its own report, or blog post,
+it seems to be disconnected from the rest of the material (to be honest,
+each section of the book seems to be disconnected from the border sections,
+but anyway the sections have a special value that builds on top of the
+others, not necessarily **touching** the borders... anyway).
+
+There are some ideas on why you would like to use utility functions, what
+are they and how to promote them from subroutines, local to a particular
+program, to utilities, that will be shared by many programs. Small
+utilities are presented, and they are very important on what they do,
+to understand the purpose of utilities:
+
+#+BEGIN_SRC lisp
+  ;; gets the last element of the list, `last' returns the last `cons'.
+  (defun last1 (lst)
+    (car (last lst)))
+
+  ;; returns true if list has only one element
+  (defun single (lst)
+    (and (consp lst) (not (cdr lst))))
+
+  ;; returns obj appended to lst
+  (defun append1 (lst obj)
+    (append lst (list obj)))
+
+  ;; similar to append1 but with nconc instead of append (which is destructive)
+  (defun conc1 (lst obj)
+    (nconc lst (list obj)))
+
+  ;; builds and returns a list if obj is not a list
+  (defun mklist (obj)
+    (if (listp obj) obj (list obj)))
+#+END_SRC
+
+There is one important case for error handling here: as these
+utilities are very concise, the error handling is performed by the
+functions that are being called:
+
+#+BEGIN_SRC lisp
+> (last1 "blub")
+>>Error: "blub" is not a list.
+Broken at LAST...
+#+END_SRC
+
+In this example, `LAST` is capturing the error and reporting.
