@@ -245,3 +245,57 @@ Broken at LAST...
 #+END_SRC
 
 In this example, `LAST` is capturing the error and reporting.
+
+Next there are more complete examples, they require more abstraction
+and lines of code, they not necessarily do more than the previous
+utilities (but anyone could challenge this statement), they just
+happen to need to be written with more lines:
+
+#+BEGIN_SRC lisp
+  ;; compares length of lists and returns true if the first one (x) is longer
+  ;; efficient as it only traverses the list until one of them is completely
+  ;; consumed
+  (defun longer (x y)
+    (labels ((compare (x y)
+               (and (consp x)
+                    (or (null y)
+                        (compare (cdr x) (cdr y))))))
+      (if (and (listp x) (listp y))
+          (compare x y)
+          (> (length x) (length y)))))
+
+  ;; returns a list removing elements which do not return true to `fn'
+  (defun filter (fn lst)
+    (let ((acc nil))
+      (dolist (x lst)
+        (let ((val (funcall fn x)))
+          (if val (push val acc))))
+      (nreverse acc)))
+
+  ;;
+  (defun group (source n)
+    (if (zerop n) (error "zero length"))
+    (labels ((rec (source acc)
+               (let ((rest (nthcdr n source)))
+                 (if (consp rest)
+                     (rec rest (cons (subseq source 0 n) acc))
+                     (nreverse (cons source acc))))))
+      (if source (rec source nil) nil)))
+#+END_SRC
+
+You can use `filter` like in the next example:
+
+#+BEGIN_SRC lisp
+> (filter #'(lambda (x) (if (numberp x) (1+ x)))
+          '(a 1 2 b 3 c d 4))
+(2 3 4 5)
+#+END_SRC
+
+The `group` function will group the list passed as the `source`
+parameter into groups of size `n`. If the last group does not have
+enough elements, it will remain as a smallest group.
+
+#+BEGIN_SRC lisp
+> (group '(a b c d e f g) 2)
+((a b) (c d) (e f) (g)
+#+END_SRC
