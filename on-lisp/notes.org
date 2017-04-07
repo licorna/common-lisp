@@ -299,3 +299,141 @@ enough elements, it will remain as a smallest group.
 > (group '(a b c d e f g) 2)
 ((a b) (c d) (e f) (g)
 #+END_SRC
+
+There are two more functions to act on list, but these are called
+"doubly-recursive" list utilities. Let's see why.
+
+#+BEGIN_SRC lisp
+  (defun flatten (x)
+    (labels ((rec (x acc)
+               (cond ((null x) acc)
+                     ((atom x) (cons x acc))
+                     (t (rec (car x) (rec cdr x) acc)))))
+      (rec x nil)))
+
+  (defun prune (test tree)
+    (labels ((rec (tree acc)
+               (cond ((null tree) (nreverse acc))
+                     ((consp (car tree))
+                      (rec (cdr tree)
+                           (cons (rec (car tree) nil) acc)))
+                     (t (rec (cdr tree)
+                             (if (funcall test (car tree))
+                                 acc
+                                 (cons (car tree) acc)))))))
+      (rec tree nil)))
+#+END_SRC
+
+The `flatten` function flattens a list, recursively, every element
+that is not an atom will be promoted to the "top" of the list. The
+second function, `prune` will remove leafs from the tree that return
+true for `test` function. It is interesting how Lisp starts revealing
+itself as a programming language with nice syntax to traverse lists
+and list based data structures (like in this case, a tree).
+
+## Search
+
+Next we have a section with functions to search in lists, let's see
+the code first:
+
+#+BEGIN_SRC lisp
+  ;; Super easy to understand
+  ;; finds the first element in `lst' that returns true to `fn'
+  (defun find2 (fn lst)
+    (if (null lst)
+        nil
+        (let ((val (funcall fn (car lst))))
+          (if val
+              (values (car lst) val)
+              (find2 fn (cdr lst))))))
+
+  ;; Not very clever either. Before returns the sublist of `list'
+  ;; that starts with object x. If the object y appears first,
+  ;; returns null. Object y not necessarily should be on the list.
+  ;; only NOT before x
+  (defun before (x y lst &key (test #'eql))
+    (and lst
+         (let ((first (car lst)))
+           (cond ((funcall test y first) nil)
+                 ((funcall test x first) lst)
+                 (t (before x y (cdr lst) :test test))))))
+
+  ;; `after' uses before to get the sublist starting with y
+  ;; and then checking if `x' is member of this new list.
+  ;; Clever and simple to follow.
+  (defun after (x y lst &key (test #'eql))
+    (let ((rest (before y x lst :test test)))
+      (and rest (member x rest :test test))))
+
+  ;; Checks if the objects is more than once in the list
+  ;; by checking if there is a sublist that starts with this
+  ;; object, and then checking again, from this sublist.
+  (defun duplicate (obj lst &key (test #'eql))
+    (member obj (cdr (member obj lst :test test)) :test test))
+
+  ;; Splits a list after a given member evaluates the predicate
+  ;; to true.
+  (defun split-if (fn lst)
+    (let ((acc nil))
+      (do ((src lst (cdr src)))
+          ((or (null src) (funcall fn (car src)))
+           (values (nreverse acc) src))
+        (push (car src) acc))))
+#+END_SRC
+
+I think the comments describe the interesting parts of these
+functions. There's not much to say, they are concise, they are already
+depending on other utilities to work. For instance, the usage of
+`before` from `after` is very clever, being at the same time, very
+efficient and simple.
+
+And finally on search, there's the list of search function that
+compare elements. Here we go:
+
+#+BEGIN_SRC lisp
+  ;; Returns the object with the biggest score as returned by the
+  ;; `fn' function.
+  (defun most (fn lst)
+    (if (null lst)
+        (values nil nil)
+        (let* ((wins (cat lst))
+               (max (funcall fn wins)))
+          (dolist (obj (cdr lst))
+            (let ((score (funcall fn obj)))
+              (when (> score max)
+                (setq wins obj
+                      max score))))
+          (values wins max))))n
+
+  ;; Uses a `fn' with that compares two objects to decide on
+  ;; a winning object from the list.
+  (defun best (fn lst)
+    (if (null lst)
+        nil
+        (let ((wins (car lst)))
+          (dolist (obj (cdr lst))
+            (if (funcall fn obj wins)
+                (setq wins obj)))
+          wins)))
+
+  ;; Returns all the objects with the biggest value evaluated
+  ;; using the `fn' function.
+  (defun mostn (fn lst)
+    (if (null lst)
+        (values nil nil)
+        (let ((result (list (car lst)))
+              (max (funcall fn (car lst))))
+          (dolist (obj (cdr lst))
+            (let ((score (funcall fn obj)))
+              (cond ((> score max)
+                     (setq max score
+                           result (list obj)))
+                    ((= score max)
+                     (push obj result)))))
+          (values (nreverse result) max))))
+#+END_SRC
+
+Super concise functions, very clearly written, they compare elements
+by using scoring functions.
+
+## Mapping
