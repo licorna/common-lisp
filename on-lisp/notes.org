@@ -436,4 +436,60 @@ compare elements. Here we go:
 Super concise functions, very clearly written, they compare elements
 by using scoring functions.
 
-## Mapping
+** Mapping
+
+Mapping functions are very important in Common Lisp (and many other
+programming languages), in this section Graham introduces several
+mapping function that we'll use to apply certain function to a list.
+
+#+BEGIN_SRC lisp
+  ;; Applies the function `fn' to the first n natural
+  ;; numbers, starting from zero.
+  (defun map0-n (fn n)
+    (mapa-b fn 0 n))
+
+  ;; Same as the previous one, but starting from 1.
+  (defun map1-n (fn n)
+    (mapa-b fn 1 n))
+
+  ;; Applies the fn function to natural numbers withing the range.
+  (defun mapa-b (fn a b &optional (step 1))
+    (do ((i a (+ i step))
+         (result nil))
+        ((> i b) (nreverse result))
+      (push (funcall fn i) result)))
+
+  ;; This function is interesting, as it traverses a list that
+  ;; will be created dynamically by calling `succ-fn' or successor
+  ;; function. It will end when `test-fn' evaluates to T for a
+  ;; given list element (computed using `succ-fn').
+  (defun map-> (fn start test-fn succ-fn)
+    (do ((i start (funcall succ-fn i))
+         (result nil))
+        ((funcall test-fn i) (nreverse result))
+      (push (funcall fn i) result)))
+
+  ;; Mapping function on a list of lists that will append the
+  ;; resulting lists together.
+  (defun mappend (fn &rest lsts)
+    (apply #'append (apply #'mapcar fn lsts)))
+
+  ;; Applies `fn' to every object in `lsts' appending
+  ;; the results to the same list and returning it.
+  (defun mapcars (fn &rest lsts)
+    (let ((result nil))
+      (dolist (lst lsts)
+        (dolist (obj lst)
+          (push (funcall fn obj) result)))
+      (nreverse result)))
+
+  ;; Applies function to leafs of a tree-like structure.
+  ;;
+  (defun rmapcar (fn &rest args)
+    (if (some #'atom args)
+        (apply fn args)
+        (apply #'mapcar
+               #'(lambda (&rest args)
+                   (apply #'rmapcar fn args))
+               args)))
+#+END_SRC
